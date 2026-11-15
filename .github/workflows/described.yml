@@ -1,0 +1,37 @@
+name: Describe
+
+# Takes out of the stock package what a phone's own partitions say of its
+# programs: the init scripts, the service descriptions, the accounts and the
+# properties. Run by hand, for one device.
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: The codename of the device to describe
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  described:
+    name: What ${{ inputs.device }}'s partitions say
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Build the packer
+        run: cargo build --locked --release -p skyward-pack
+      - name: Take what the partitions say
+        env:
+          DEVICE: ${{ inputs.device }}
+        run: ./target/release/skyward-pack described --config "devices/$DEVICE.toml" --out described
+      - name: Show what was taken
+        run: find described -type f | sort | head -200
+      - uses: actions/upload-artifact@v7
+        with:
+          name: described-${{ inputs.device }}
+          path: described/
+          if-no-files-found: error
+          retention-days: 7
